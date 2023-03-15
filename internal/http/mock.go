@@ -5,7 +5,7 @@
 package http
 
 import (
-	counter "go-aws-ec2/pkg/counter"
+	counter "counters/pkg/counter"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"

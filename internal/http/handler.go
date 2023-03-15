@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"go-aws-ec2/pkg/counter"
+	"counters/pkg/counter"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

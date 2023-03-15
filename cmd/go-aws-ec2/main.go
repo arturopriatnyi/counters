@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go-aws-ec2/internal/http"
-	"go-aws-ec2/pkg/counter"
+	"counters/internal/http"
+	"counters/pkg/counter"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"

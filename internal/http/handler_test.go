@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go-aws-ec2/pkg/counter"
+	"counters/pkg/counter"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"

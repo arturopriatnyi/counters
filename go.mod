@@ -1,4 +1,4 @@
-module go-aws-ec2
+module counters
 
 go 1.19
 
