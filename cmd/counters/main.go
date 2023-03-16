@@ -8,10 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"counters/internal/config"
 	"counters/internal/http"
 	"counters/pkg/counter"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sethvargo/go-envconfig"
 	"go.uber.org/zap"
 )
 
@@ -26,13 +28,18 @@ func main() {
 	undo := zap.ReplaceGlobals(l)
 	defer undo()
 
+	var cfg config.Config
+	if err := envconfig.Process(ctx, &cfg); err != nil {
+		l.Fatal("config reading error", zap.Error(err))
+	}
+
 	cms := counter.NewMemoryStore()
 	cm := counter.NewManager(cms)
 
 	http.MustRegisterMetrics(prometheus.DefaultRegisterer)
 
 	s := &nethttp.Server{
-		Addr:    ":10000",
+		Addr:    cfg.HTTPServer.Addr,
 		Handler: http.NewHandler(l, cm),
 	}
 	go func() {
@@ -40,7 +47,7 @@ func main() {
 			l.Fatal("HTTP server didn't start", zap.Error(err))
 		}
 	}()
-	l.Info("HTTP server started")
+	l.Info("HTTP server started", zap.String("address", cfg.HTTPServer.Addr))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
