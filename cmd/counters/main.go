@@ -11,6 +11,7 @@ import (
 	"counters/internal/config"
 	"counters/internal/http"
 	"counters/pkg/counter"
+	"counters/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sethvargo/go-envconfig"
@@ -21,17 +22,19 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	l, err := zap.NewProduction()
+	var cfg config.Config
+	if err := envconfig.Process(ctx, &cfg); err != nil {
+		log.Fatalf("config reading failed: %v", err)
+	}
+
+	l, err := logger.New(logger.WithMode(logger.Mode(cfg.Mode)))
 	if err != nil {
-		log.Fatalf("zap logger is not created: %v", err)
+		log.Fatalf("zap logger creating failed: %v", err)
 	}
 	undo := zap.ReplaceGlobals(l)
 	defer undo()
 
-	var cfg config.Config
-	if err := envconfig.Process(ctx, &cfg); err != nil {
-		l.Fatal("config reading error", zap.Error(err))
-	}
+	l.Info("starting", zap.Any("mode", cfg.Mode))
 
 	cms := counter.NewMemoryStore()
 	cm := counter.NewManager(cms)
@@ -44,7 +47,7 @@ func main() {
 	}
 	go func() {
 		if err := s.ListenAndServe(); err != nil && err != nethttp.ErrServerClosed {
-			l.Fatal("HTTP server didn't start", zap.Error(err))
+			l.Fatal("HTTP server starting failed", zap.Error(err))
 		}
 	}()
 	l.Info("HTTP server started", zap.String("address", cfg.HTTPServer.Addr))
