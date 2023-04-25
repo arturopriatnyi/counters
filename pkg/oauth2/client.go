@@ -1,3 +1,4 @@
+//go:generate mockgen -source=client.go -destination=mock.go -package=oauth2
 package oauth2
 
 import (
