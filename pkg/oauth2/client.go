@@ -1,6 +1,14 @@
 package oauth2
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var (
+	ErrInvalidState = errors.New("invalid state")
+	ErrInvalidCode  = errors.New("invalid code")
+)
 
 type Client interface {
 	AuthURL() string
