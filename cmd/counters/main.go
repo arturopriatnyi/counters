@@ -46,7 +46,7 @@ func main() {
 		Handler: http.NewHandler(l, cm),
 	}
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != nethttp.ErrServerClosed {
+		if err := s.ListenAndServeTLS("tls/cert.crt", "tls/cert.key"); err != nil && err != nethttp.ErrServerClosed {
 			l.Fatal("HTTP server starting failed", zap.Error(err))
 		}
 	}()
