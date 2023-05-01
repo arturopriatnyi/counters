@@ -19,10 +19,7 @@ type UserMemoryStorage struct {
 }
 
 func NewUserMemoryStorage() *UserMemoryStorage {
-	return &UserMemoryStorage{
-		mu:    sync.RWMutex{},
-		users: make(map[string]*User),
-	}
+	return &UserMemoryStorage{users: make(map[string]*User)}
 }
 
 func (s *UserMemoryStorage) Set(user *User) error {

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/mail"
 
+	"counters/pkg/oauth2"
+
 	"github.com/google/uuid"
 )
 
@@ -13,7 +15,7 @@ type User struct {
 	ID    string
 	Email string
 
-	tokens []Token
+	tokens []oauth2.Token
 }
 
 func NewUser(email string) (*User, error) {
@@ -27,9 +29,9 @@ func NewUser(email string) (*User, error) {
 	}, nil
 }
 
-func (u *User) SetToken(token Token) {
+func (u *User) SetToken(token oauth2.Token) {
 	for i := range u.tokens {
-		if u.tokens[i].Issuer == token.Issuer {
+		if u.tokens[i].Provider == token.Provider {
 			u.tokens[i] = token
 			return
 		}
@@ -37,11 +39,3 @@ func (u *User) SetToken(token Token) {
 
 	u.tokens = append(u.tokens, token)
 }
-
-type Token struct {
-	Access string
-	_      string // refresh token is not used for now
-	Issuer TokenIssuer
-}
-
-type TokenIssuer uint8

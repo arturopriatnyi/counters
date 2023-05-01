@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"counters/pkg/oauth2"
 )
 
 func TestNewUserMemoryStorage(t *testing.T) {
@@ -18,7 +20,7 @@ func TestNewUserMemoryStorage(t *testing.T) {
 
 func TestUserMemoryStorage_Set(t *testing.T) {
 	storage := &UserMemoryStorage{users: make(map[string]*User)}
-	user := &User{ID: "x-x-x-x-x", Email: "x@x.x", tokens: []Token{}}
+	user := &User{ID: "x-x-x-x-x", Email: "x@x.x", tokens: []oauth2.Token{}}
 
 	err := storage.Set(user)
 
@@ -37,7 +39,7 @@ func TestUserMemoryStorage_Get(t *testing.T) {
 		wantUser *User
 		wantErr  error
 	}{
-		"UserIsRetrieved": {
+		"OK": {
 			storage: &UserMemoryStorage{
 				users: map[string]*User{
 					"x@x.x": {Email: "x@x.x"},

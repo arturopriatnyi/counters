@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"counters/pkg/oauth2"
 )
 
 func TestNewUser(t *testing.T) {
@@ -11,7 +13,7 @@ func TestNewUser(t *testing.T) {
 		email   string
 		wantErr error
 	}{
-		"UserIsCreated": {
+		"OK": {
 			email:   "x@x.x",
 			wantErr: nil,
 		},
@@ -34,7 +36,6 @@ func TestNewUser(t *testing.T) {
 					t.Errorf("want: [], got: %v", u.tokens)
 				}
 			}
-
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("want: %v, got: %v", tt.wantErr, err)
 			}
@@ -44,44 +45,46 @@ func TestNewUser(t *testing.T) {
 
 func TestUser_SetToken(t *testing.T) {
 	for name, tt := range map[string]struct {
-		tokens     []Token
-		token      Token
-		wantTokens []Token
+		user       User
+		token      oauth2.Token
+		wantTokens []oauth2.Token
 	}{
 		"FirstTokenIsSet": {
-			tokens: nil,
-			token:  Token{Access: "accessToken", Issuer: 1},
-			wantTokens: []Token{
-				{Access: "accessToken", Issuer: 1},
+			user:  User{tokens: nil},
+			token: oauth2.Token{Access: "accessToken", Provider: 1},
+			wantTokens: []oauth2.Token{
+				{Access: "accessToken", Provider: 1},
 			},
 		},
 		"SecondTokenIsSet": {
-			tokens: []Token{
-				{Access: "accessToken1", Issuer: 1},
+			user: User{
+				tokens: []oauth2.Token{
+					{Access: "accessToken1", Provider: 1},
+				},
 			},
-			token: Token{Access: "accessToken2", Issuer: 2},
-			wantTokens: []Token{
-				{Access: "accessToken1", Issuer: 1},
-				{Access: "accessToken2", Issuer: 2},
+			token: oauth2.Token{Access: "accessToken2", Provider: 2},
+			wantTokens: []oauth2.Token{
+				{Access: "accessToken1", Provider: 1},
+				{Access: "accessToken2", Provider: 2},
 			},
 		},
 		"TokenIsOverridden": {
-			tokens: []Token{
-				{Access: "accessToken", Issuer: 1},
+			user: User{
+				tokens: []oauth2.Token{
+					{Access: "accessToken", Provider: 1},
+				},
 			},
-			token: Token{Access: "newAccessToken", Issuer: 1},
-			wantTokens: []Token{
-				{Access: "newAccessToken", Issuer: 1},
+			token: oauth2.Token{Access: "newAccessToken", Provider: 1},
+			wantTokens: []oauth2.Token{
+				{Access: "newAccessToken", Provider: 1},
 			},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			u := &User{tokens: tt.tokens}
+			tt.user.SetToken(tt.token)
 
-			u.SetToken(tt.token)
-
-			if !reflect.DeepEqual(u.tokens, tt.wantTokens) {
-				t.Errorf("want: %+v, got: %+v", tt.wantTokens, u.tokens)
+			if !reflect.DeepEqual(tt.user.tokens, tt.wantTokens) {
+				t.Errorf("want: %+v, got: %+v", tt.wantTokens, tt.user.tokens)
 			}
 		})
 	}
