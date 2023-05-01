@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"bytes"
@@ -101,7 +101,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{ID: "id", Value: 1},
+						&counter.Counter{ID: "id", Value: 1},
 						nil,
 					)
 
@@ -119,7 +119,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{},
+						nil,
 						counter.ErrNotFound,
 					)
 
@@ -137,7 +137,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{},
+						nil,
 						errors.New("unexpected error"),
 					)
 

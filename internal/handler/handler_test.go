@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"net/http"
@@ -11,7 +11,9 @@ import (
 )
 
 func TestNewHandler(t *testing.T) {
-	h := NewHandler(zap.NewNop(), NewMockCounterManager(gomock.NewController(t)))
+	c := gomock.NewController(t)
+
+	h := New(zap.NewNop(), NewMockIAManager(c), NewMockCounterManager(c))
 
 	if h == nil {
 		t.Errorf("want handler: <non-nil>, got: <nil>")
