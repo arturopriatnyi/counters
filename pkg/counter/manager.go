@@ -1,37 +1,42 @@
 package counter
 
+import "errors"
+
 type Manager struct {
-	s Store
+	s Storage
 }
 
-func NewManager(r Store) *Manager {
-	return &Manager{s: r}
+func NewManager(s Storage) *Manager {
+	return &Manager{s: s}
 }
+
+var ErrExists = errors.New("counter exists")
 
 func (m *Manager) Add(id string) error {
-	if err := m.s.Store(Counter{ID: id}); err != nil {
+	_, err := m.s.Get(id)
+	if err == nil {
+		return ErrExists
+	}
+	if err != ErrNotFound {
 		return err
 	}
 
-	return nil
+	return m.s.Set(&Counter{ID: id})
 }
 
-func (m *Manager) Get(id string) (Counter, error) {
-	return m.s.Load(id)
+func (m *Manager) Get(id string) (*Counter, error) {
+	return m.s.Get(id)
 }
 
 func (m *Manager) Inc(id string) error {
-	counter, err := m.s.Load(id)
+	counter, err := m.s.Get(id)
 	if err != nil {
-		return err
-	}
-	if err := m.s.Delete(counter.ID); err != nil {
 		return err
 	}
 
 	counter.Inc()
 
-	return m.s.Store(counter)
+	return m.s.Set(counter)
 }
 
 func (m *Manager) Delete(id string) error {

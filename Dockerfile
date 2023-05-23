@@ -1,7 +1,7 @@
 FROM golang:1.19-alpine
 
-WORKDIR ./go-aws-ec2
+WORKDIR ./counters
 COPY . .
 
-RUN go build -o ./build/go-aws-ec2 ./cmd/go-aws-ec2/main.go
-CMD ["./build/go-aws-ec2"]
+RUN go build -o ./build/counters ./cmd/counters/main.go
+CMD ["./build/counters"]

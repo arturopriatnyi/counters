@@ -2,9 +2,11 @@
 version: "3.9"
 
 services:
-  go-aws-ec2:
-    container_name: go-aws-ec2
+  counters:
+    container_name: counters
     build: .
+    env_file:
+      - .env
     ports:
       - "10000:10000"
     restart: on-failure

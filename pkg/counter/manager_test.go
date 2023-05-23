@@ -1,6 +1,7 @@
 package counter
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 )
 
 func TestNewManager(t *testing.T) {
-	s := NewMockStore(gomock.NewController(t))
+	s := NewMockStorage(gomock.NewController(t))
 
 	m := NewManager(s)
 
@@ -18,38 +19,58 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestManager_Add(t *testing.T) {
+	errUnexpected := errors.New("unexpected error")
+
 	for name, tt := range map[string]struct {
-		s       func(*gomock.Controller) Store
 		id      string
+		s       func(*gomock.Controller) Storage
 		wantErr error
 	}{
 		"OK": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Store(Counter{ID: "id"}).
+					Get("id").
+					Return(nil, ErrNotFound)
+				s.
+					EXPECT().
+					Set(&Counter{ID: "id"}).
 					Return(nil)
 
 				return s
 			},
-			id:      "id",
 			wantErr: nil,
 		},
 		"ErrExists": {
 			id: "id",
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Store(Counter{ID: "id"}).
-					Return(ErrExists)
+					Get("id").
+					Return(&Counter{ID: "id"}, nil)
 
 				return s
 			},
 			wantErr: ErrExists,
+		},
+		"ErrUnexpected": {
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
+
+				s.
+					EXPECT().
+					Get("id").
+					Return(nil, errUnexpected)
+
+				return s
+			},
+			wantErr: errUnexpected,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -57,7 +78,7 @@ func TestManager_Add(t *testing.T) {
 
 			err := m.Add(tt.id)
 
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("want: %v, got: %v", tt.wantErr, err)
 			}
 		})
@@ -66,39 +87,39 @@ func TestManager_Add(t *testing.T) {
 
 func TestManager_Get(t *testing.T) {
 	for name, tt := range map[string]struct {
-		s           func(*gomock.Controller) Store
+		s           func(*gomock.Controller) Storage
 		id          string
-		wantCounter Counter
+		wantCounter *Counter
 		wantErr     error
 	}{
 		"OK": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Load("id").
-					Return(Counter{ID: "id", Value: 1}, nil)
+					Get("id").
+					Return(&Counter{ID: "id", Value: 1}, nil)
 
 				return s
 			},
 			id:          "id",
-			wantCounter: Counter{ID: "id", Value: 1},
+			wantCounter: &Counter{ID: "id", Value: 1},
 			wantErr:     nil,
 		},
 		"ErrNotFound": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Load("id").
-					Return(Counter{}, ErrNotFound)
+					Get("id").
+					Return(nil, ErrNotFound)
 
 				return s
 			},
 			id:          "id",
-			wantCounter: Counter{},
+			wantCounter: nil,
 			wantErr:     ErrNotFound,
 		},
 	} {
@@ -107,10 +128,10 @@ func TestManager_Get(t *testing.T) {
 
 			c, err := m.Get(tt.id)
 
-			if c != tt.wantCounter {
+			if !reflect.DeepEqual(c, tt.wantCounter) {
 				t.Errorf("want: %+v, got: %+v", tt.wantCounter, c)
 			}
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("want: %v, got: %v", tt.wantErr, err)
 			}
 		})
@@ -118,64 +139,62 @@ func TestManager_Get(t *testing.T) {
 }
 
 func TestManager_Inc(t *testing.T) {
+	errUnexpected := errors.New("unexpected error")
+
 	for name, tt := range map[string]struct {
-		s       func(*gomock.Controller) Store
 		id      string
+		s       func(*gomock.Controller) Storage
 		wantErr error
 	}{
 		"OK": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Load("id").
-					Return(Counter{ID: "id", Value: 1}, nil)
+					Get("id").
+					Return(&Counter{ID: "id", Value: 1}, nil)
 				s.
 					EXPECT().
-					Delete("id").
-					Return(nil)
-				s.
-					EXPECT().
-					Store(Counter{ID: "id", Value: 2}).
+					Set(&Counter{ID: "id", Value: 2}).
 					Return(nil)
 
 				return s
 			},
-			id:      "id",
 			wantErr: nil,
 		},
-		"LoadErrNotFound": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+		"ErrNotFound": {
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Load("id").
-					Return(Counter{}, ErrNotFound)
+					Get("id").
+					Return(nil, ErrNotFound)
 
 				return s
 			},
 			id:      "id",
 			wantErr: ErrNotFound,
 		},
-		"DeleteErrNotFound": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+		"ErrUnexpected": {
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
-					Load("id").
-					Return(Counter{ID: "id", Value: 1}, nil)
+					Get("id").
+					Return(&Counter{ID: "id", Value: 1}, nil)
 				s.
 					EXPECT().
-					Delete("id").
-					Return(ErrNotFound)
+					Set(&Counter{ID: "id", Value: 2}).
+					Return(errUnexpected)
 
 				return s
 			},
-			id:      "id",
-			wantErr: ErrNotFound,
+			wantErr: errUnexpected,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -183,7 +202,7 @@ func TestManager_Inc(t *testing.T) {
 
 			err := m.Inc(tt.id)
 
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("want: %v, got: %v", tt.wantErr, err)
 			}
 		})
@@ -192,13 +211,14 @@ func TestManager_Inc(t *testing.T) {
 
 func TestManager_Delete(t *testing.T) {
 	for name, tt := range map[string]struct {
-		s       func(*gomock.Controller) Store
 		id      string
+		s       func(*gomock.Controller) Storage
 		wantErr error
 	}{
 		"OK": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
@@ -207,12 +227,12 @@ func TestManager_Delete(t *testing.T) {
 
 				return s
 			},
-			id:      "id",
 			wantErr: nil,
 		},
 		"ErrNotFound": {
-			s: func(c *gomock.Controller) Store {
-				s := NewMockStore(c)
+			id: "id",
+			s: func(c *gomock.Controller) Storage {
+				s := NewMockStorage(c)
 
 				s.
 					EXPECT().
@@ -221,7 +241,6 @@ func TestManager_Delete(t *testing.T) {
 
 				return s
 			},
-			id:      "id",
 			wantErr: ErrNotFound,
 		},
 	} {
@@ -230,7 +249,7 @@ func TestManager_Delete(t *testing.T) {
 
 			err := m.Delete(tt.id)
 
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("want: %v, got: %v", tt.wantErr, err)
 			}
 		})

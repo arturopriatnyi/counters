@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"bytes"
@@ -14,56 +14,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"go.uber.org/zap"
 )
-
-func TestNewHandler(t *testing.T) {
-	h := NewHandler(zap.NewNop(), NewMockCounterManager(gomock.NewController(t)))
-
-	if h == nil {
-		t.Errorf("want handler: <non-nil>, got: <nil>")
-	}
-}
-
-func Test_noRoute(t *testing.T) {
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	noRoute()(c)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("want status code: 404, got: %d", w.Code)
-	}
-	if w.Body.String() != "" {
-		t.Errorf("want body: , got: %s", w.Body.String())
-	}
-}
-
-func Test_noMethod(t *testing.T) {
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	noMethod()(c)
-
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("want status code: 405, got: %d", w.Code)
-	}
-	if w.Body.String() != "" {
-		t.Errorf("want body: , got: %s", w.Body.String())
-	}
-}
-
-func Test_health(t *testing.T) {
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	health()(c)
-
-	if w.Code != 200 {
-		t.Errorf("want status code: 200, got: %d", w.Code)
-	}
-	if w.Body.String() != "" {
-		t.Errorf("want body: , got: %s", w.Body.String())
-	}
-}
 
 func Test_addCounter(t *testing.T) {
 	for name, tt := range map[string]struct {
@@ -151,7 +101,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{ID: "id", Value: 1},
+						&counter.Counter{ID: "id", Value: 1},
 						nil,
 					)
 
@@ -169,7 +119,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{},
+						nil,
 						counter.ErrNotFound,
 					)
 
@@ -187,7 +137,7 @@ func Test_getCounter(t *testing.T) {
 					EXPECT().
 					Get("id").
 					Return(
-						counter.Counter{},
+						nil,
 						errors.New("unexpected error"),
 					)
 

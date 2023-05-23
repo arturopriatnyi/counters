@@ -3,15 +3,17 @@ package main
 import (
 	"context"
 	"log"
-	nethttp "net/http"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"counters/internal/config"
-	"counters/internal/http"
+	"counters/internal/handler"
 	"counters/pkg/counter"
+	"counters/pkg/iam"
 	"counters/pkg/logger"
+	"counters/pkg/oauth2"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sethvargo/go-envconfig"
@@ -36,17 +38,38 @@ func main() {
 
 	l.Info("starting", zap.Any("mode", cfg.Mode))
 
-	cms := counter.NewMemoryStore()
+	cms := counter.NewMemoryStorage()
 	cm := counter.NewManager(cms)
 
-	http.MustRegisterMetrics(prometheus.DefaultRegisterer)
+	ums := iam.NewUserMemoryStorage()
+	iamm := iam.NewManager(ums, map[oauth2.Provider]oauth2.Client{
+		oauth2.Google: oauth2.NewGoogleClient(
+			oauth2.Config{
+				ClientID:     cfg.GoogleOAuth2.ClientID,
+				ClientSecret: cfg.GoogleOAuth2.ClientSecret,
+				RedirectURL:  cfg.GoogleOAuth2.RedirectURL,
+				Scopes:       cfg.GoogleOAuth2.Scopes,
+			},
+			http.DefaultClient,
+		),
+		oauth2.GitHub: oauth2.NewGitHubClient(
+			oauth2.Config{
+				ClientID:     cfg.GitHubOAuth2.ClientID,
+				ClientSecret: cfg.GitHubOAuth2.ClientSecret,
+				RedirectURL:  cfg.GitHubOAuth2.RedirectURL,
+				Scopes:       cfg.GitHubOAuth2.Scopes,
+			},
+			http.DefaultClient,
+		),
+	})
+	handler.MustRegisterMetrics(prometheus.DefaultRegisterer)
 
-	s := &nethttp.Server{
+	s := &http.Server{
 		Addr:    cfg.HTTPServer.Addr,
-		Handler: http.NewHandler(l, cm),
+		Handler: handler.New(l, iamm, cm),
 	}
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != nethttp.ErrServerClosed {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			l.Fatal("HTTP server starting failed", zap.Error(err))
 		}
 	}()
